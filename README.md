@@ -1,72 +1,69 @@
 # microWakeWord Trainer (CLI / RunPod)
 
-Train **microWakeWord** detection models from the command line, optimized for **RunPod GPU pods**.
+Train **microWakeWord** detection models from the command line on **RunPod GPU pods**.
 
-No web UI, no Jupyter notebooks — just SSH in, set up, and train.
-
----
-
-## Quick Start
-
-```bash
-# 1. SSH into your RunPod pod
-# 2. Run setup (one time — installs Python env + downloads ~50GB of datasets)
-setup
-
-# 3. Train a wake word
-train_wake_word "hey jarvis"
-```
-
-That's it. Your trained model will be in `/data/output/`.
+No custom Docker image. No Jupyter notebooks. Just clone, set up, and train.
 
 ---
 
 ## RunPod Setup (Step by Step)
 
-### 1. Create a RunPod Account
+### Step 1: Create a RunPod Account
 
-Go to [runpod.io](https://www.runpod.io/) and create an account.
+Go to [runpod.io](https://www.runpod.io/) and create an account. Add credits or connect a payment method.
 
-### 2. Create a Network Volume
+### Step 2: Create a Network Volume
 
-You need persistent storage for datasets and models (~100GB recommended).
+Datasets and models need persistent storage (~100GB). Without a network volume, everything is lost when the pod stops.
 
-1. Go to **Storage** in the RunPod dashboard
-2. Click **Create Network Volume**
-3. Set size to **100 GB** (or more)
-4. Choose the same region you'll use for your pod
+1. In the RunPod dashboard, go to **Storage**
+2. Click **+ Network Volume**
+3. Set the size to **100 GB** (or more)
+4. Pick a datacenter region (remember which one — your pod must be in the same region)
 5. Name it something like `mww-data`
+6. Click **Create**
 
-### 3. Create a GPU Pod
+### Step 3: Deploy a GPU Pod
 
-1. Go to **Pods** → **Deploy**
-2. Choose a GPU (any NVIDIA GPU works — A40, RTX 4090, RTX 3090, etc.)
-3. Under **Template**, select **Custom**
-4. Set the **Docker image** to your built image (see [Building the Docker Image](#building-the-docker-image) below), or use:
-   ```
-   ghcr.io/bigpappy098/microwakeword-trainer:latest
-   ```
-5. Under **Volume**, attach your network volume and set the mount path to:
-   ```
-   /data
-   ```
-6. **(Optional)** Set environment variables for GitHub integration (see [GitHub Integration](#github-integration)):
-   - `GITHUB_TOKEN` = your GitHub personal access token
+1. Go to **Pods** → **+ Deploy**
+2. Choose a GPU — any NVIDIA GPU works (RTX 3090, RTX 4090, A40, etc.)
+3. Under **Template**, pick **RunPod Pytorch 2.4.0** (or any stock template with Python 3 and CUDA)
+4. Under **Volume**, attach your network volume from Step 2 and set the mount path to `/data`
+5. **(Optional)** Under **Environment Variables**, add these for auto-pushing models to GitHub:
+   - `GITHUB_TOKEN` = your GitHub personal access token (see [GitHub Integration](#github-integration))
    - `GITHUB_REPO` = `owner/repo` (e.g., `myuser/my-wakewords`)
-7. Click **Deploy**
+6. Click **Deploy**
 
-### 4. Connect via SSH
+### Step 4: Connect via SSH or Web Terminal
 
-Once the pod is running:
+Once the pod shows **Running**:
 
-1. Click **Connect** on your pod
-2. Use the SSH command provided, e.g.:
-   ```bash
-   ssh root@<pod-ip> -p <port> -i ~/.ssh/id_rsa
-   ```
-3. You'll see a welcome message with available commands
+- **Web Terminal**: Click **Connect** → **Start Web Terminal** → **Connect to Web Terminal**
+- **SSH**: Click **Connect**, copy the SSH command, and run it in your local terminal:
+  ```bash
+  ssh root@<pod-ip> -p <port> -i ~/.ssh/id_rsa
+  ```
 
-### 5. Run Setup (First Time Only)
+### Step 5: Clone This Repo
+
+```bash
+git clone https://github.com/BigPappy098/microWakeWord-Trainer-Nvidia-Docker.git /root/mww-scripts
+```
+
+This puts all the training scripts into `/root/mww-scripts/`.
+
+### Step 6: Set Up Your Shell
+
+Copy the custom `.bashrc` which adds the scripts to your PATH and sets up the environment:
+
+```bash
+cp /root/mww-scripts/.bashrc ~/.bashrc
+source ~/.bashrc
+```
+
+You should see the **microWakeWord Trainer** welcome message with available commands.
+
+### Step 7: Run Setup (First Time Only)
 
 ```bash
 setup
@@ -76,22 +73,44 @@ This does two things:
 1. **Creates the Python virtual environment** — installs TensorFlow, PyTorch, and all training dependencies into `/data/.venv`
 2. **Downloads training datasets** — background noise, speech corpora, room impulse responses (~50GB)
 
-This takes a while on the first run. Everything is cached in `/data`, so it persists across pod restarts.
+This takes a while on the first run (30-60+ minutes depending on network speed). Everything is cached on your network volume at `/data`, so it **persists across pod restarts**. You only run this once.
 
-### 6. Train a Wake Word
+### Step 8: Train a Wake Word
 
 ```bash
 train_wake_word "hey jarvis"
 ```
 
-The training pipeline:
-1. **Generates** synthetic voice samples using TTS
-2. **Augments** samples with background noise, room effects, pitch shifts, etc.
-3. **Trains** a neural network (TensorFlow)
-4. **Outputs** a quantized `.tflite` model + `.json` metadata
-5. **Pushes to GitHub** (if configured)
+That's it! The training pipeline will:
+1. **Generate** synthetic voice samples using TTS
+2. **Augment** samples with background noise, room effects, pitch shifts, etc.
+3. **Train** a neural network (TensorFlow)
+4. **Output** a quantized `.tflite` model + `.json` metadata
+5. **Push to GitHub** (if configured)
 
-#### Training Options
+Your trained model will be in `/data/output/`.
+
+---
+
+## When You Come Back Later
+
+If you stop your pod and restart it later (or create a new pod with the same network volume), you just need to re-clone and source:
+
+```bash
+git clone https://github.com/BigPappy098/microWakeWord-Trainer-Nvidia-Docker.git /root/mww-scripts
+cp /root/mww-scripts/.bashrc ~/.bashrc
+source ~/.bashrc
+```
+
+The heavy stuff (Python venv + datasets) is already on your network volume. You can go straight to training:
+
+```bash
+train_wake_word "hey jarvis"
+```
+
+---
+
+## Training Options
 
 ```bash
 train_wake_word [options] <wake_word> [<wake_word_title>]
@@ -106,7 +125,7 @@ Options:
 
 Examples:
 ```bash
-# Quick test run (small sample/step count)
+# Quick test run (smaller sample/step count)
 train_wake_word --samples=1000 --training-steps=500 "hey jarvis"
 
 # Full training with custom title
@@ -135,7 +154,7 @@ The `.tflite` file is what you flash to your ESP32 or other device via ESPHome.
 
 ## Personal Voice Samples (Optional)
 
-Recording your own voice improves accuracy for your specific voice. Since there's no microphone on RunPod, record `.wav` files on your local machine and upload them.
+Recording your own voice improves accuracy. Since there's no microphone on RunPod, record `.wav` files on your local machine and upload them.
 
 ### Requirements
 - 16kHz sample rate
@@ -165,19 +184,7 @@ Personal samples are automatically detected and given **3x sampling weight** dur
 
 ## GitHub Integration
 
-Automatically push trained model files to a GitHub repository after training.
-
-### Setup
-
-Set these environment variables (in RunPod pod settings or in your shell):
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `GITHUB_TOKEN` | Yes | — | GitHub Personal Access Token with `repo` scope |
-| `GITHUB_REPO` | Yes | — | Target repo in `owner/repo` format |
-| `GITHUB_BRANCH` | No | `main` | Branch to push to |
-| `GITHUB_PATH` | No | `.` | Directory within the repo for model files |
-| `GITHUB_COMMIT_MSG` | No | Auto-generated | Custom commit message |
+Automatically push trained model files to a GitHub repository after training completes.
 
 ### Create a GitHub Token
 
@@ -189,41 +196,26 @@ Set these environment variables (in RunPod pod settings or in your shell):
 
 ### Set Environment Variables
 
-In RunPod, add them under your pod's **Environment Variables**:
-```
-GITHUB_TOKEN=ghp_your_token_here
-GITHUB_REPO=yourusername/your-wakewords-repo
-```
+You can set these in RunPod's pod **Environment Variables** (so they persist across restarts), or export them in your SSH session:
 
-Or export them in your SSH session:
 ```bash
 export GITHUB_TOKEN=ghp_your_token_here
 export GITHUB_REPO=yourusername/your-wakewords-repo
 ```
 
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `GITHUB_TOKEN` | Yes | — | GitHub Personal Access Token with `repo` scope |
+| `GITHUB_REPO` | Yes | — | Target repo in `owner/repo` format |
+| `GITHUB_BRANCH` | No | `main` | Branch to push to |
+| `GITHUB_PATH` | No | `.` | Directory within the repo for model files |
+| `GITHUB_COMMIT_MSG` | No | Auto-generated | Custom commit message |
+
 After training completes, the `.tflite` and `.json` files are automatically committed and pushed. If the env vars aren't set, this step is silently skipped.
 
 ---
 
-## Building the Docker Image
-
-To build and push your own image:
-
-```bash
-git clone https://github.com/BigPappy098/microWakeWord-Trainer-Nvidia-Docker.git
-cd microWakeWord-Trainer-Nvidia-Docker
-
-docker build -t your-registry/mww-trainer:latest .
-docker push your-registry/mww-trainer:latest
-```
-
-The image uses `nvidia/cuda:12.9.0-runtime-ubuntu24.04` as the base, so it works on any NVIDIA GPU.
-
----
-
 ## Other Useful Commands
-
-Once SSH'd into the pod:
 
 ```bash
 setup                    # Run full setup (venv + datasets)
@@ -253,7 +245,7 @@ To start completely fresh, delete the data volume contents:
 rm -rf /data/*
 ```
 
-This removes cached datasets, the Python venv, and all trained models. You'll need to run `setup` again.
+Then run `setup` again. This removes cached datasets, the Python venv, and all trained models.
 
 ---
 
@@ -268,7 +260,7 @@ This removes cached datasets, the Python venv, and all trained models. You'll ne
 | `/data/output/` | Trained models | ~10 MB per model |
 | **Total** | | **~60 GB minimum** |
 
-A 100 GB network volume is recommended to have comfortable headroom.
+A **100 GB network volume** is recommended for comfortable headroom.
 
 ---
 
