@@ -1,4 +1,5 @@
 #!/bin/bash
-# Simple entrypoint: drop into an interactive login shell for SSH access.
-# All setup and training is done manually by the user.
-exec /bin/bash -l
+# Keep the container alive for RunPod SSH / Web Terminal access.
+# When users connect, RunPod opens a new bash session inside
+# this running container — .bashrc handles environment setup.
+exec sleep infinity
