@@ -44,7 +44,7 @@ You need persistent storage for datasets and models (~100GB recommended).
 3. Under **Template**, select **Custom**
 4. Set the **Docker image** to your built image (see [Building the Docker Image](#building-the-docker-image) below), or use:
    ```
-   ghcr.io/bigpappy098/microwakeword-trainer:latest
+   ghcr.io/bigpappy098/microwakeword-trainer-nvidia-docker:latest
    ```
 5. Under **Volume**, attach your network volume and set the mount path to:
    ```
