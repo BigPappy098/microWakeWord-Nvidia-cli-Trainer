@@ -30,12 +30,13 @@ This lets the trainer pull your recordings and push finished models back to your
 Recording your own voice saying the wake word improves detection accuracy. These samples get weighted 3x during training.
 
 1. On your computer, record yourself saying your wake word
-   - Format: `.wav`, 16kHz sample rate, 16-bit PCM, mono
-   - Most voice recorder apps work — just convert to `.wav` afterward if needed
+   - Any common audio format works: `.wav`, `.mp3`, `.flac`, `.ogg`, `.m4a`, `.webm`, `.aac`
+   - Files are **automatically converted** to the required format (16kHz, 16-bit PCM, mono) during pull
+   - Most phone voice recorder apps work out of the box — no manual conversion needed
 2. Name the files: `speaker01_take01.wav`, `speaker01_take02.wav`, etc.
    - For multiple people: `speaker02_take01.wav`, `speaker02_take02.wav`, etc.
    - Aim for **10+ takes per speaker**
-3. Add the `.wav` files to the `personal_samples/` folder in your fork
+3. Add the audio files to the `personal_samples/` folder in your fork
 4. Commit and push them to GitHub
 
 **Tips for good recordings:**

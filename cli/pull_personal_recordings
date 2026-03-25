@@ -1,8 +1,11 @@
 #!/bin/bash
 # pull_personal_recordings
 # -------------------------------------------------------------------------
-# Pulls personal .wav recordings from the user's GitHub fork into
+# Pulls personal recordings from the user's GitHub fork into
 # /data/personal_samples/ for use during training.
+#
+# Accepts any common audio format (wav, mp3, flac, ogg, m4a, webm).
+# All files are auto-converted to 16kHz, 16-bit PCM, mono WAV.
 #
 # Uses the same GITHUB_TOKEN + GITHUB_REPO env vars as github_push.sh.
 # If neither is set, or no recordings are found, this is a no-op.
@@ -24,6 +27,9 @@ GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
 RECORDINGS_PATH="${GITHUB_RECORDINGS_PATH:-personal_samples}"
 TARGET_DIR="${DATA_DIR}/personal_samples"
 
+# Supported audio extensions (case-insensitive matching)
+AUDIO_EXTS="wav mp3 flac ogg m4a webm aac wma"
+
 echo "===== Checking for personal recordings in ${GITHUB_REPO}/${RECORDINGS_PATH} ====="
 
 # Use GitHub API to list contents of the recordings directory
@@ -37,26 +43,27 @@ RESPONSE=$(curl -sf \
     exit 0
 }
 
-# Extract .wav download URLs via Python (available in the container)
-WAV_URLS=$(python3 -c "
+# Extract audio file download URLs via Python (available in the container)
+AUDIO_URLS=$(python3 -c "
 import sys, json
+exts = set('${AUDIO_EXTS}'.split())
 items = json.loads(sys.stdin.read())
 if not isinstance(items, list):
     sys.exit(0)
 for f in items:
     name = f.get('name', '')
     url = f.get('download_url', '')
-    if name.lower().endswith('.wav') and url:
+    if url and '.' in name and name.rsplit('.', 1)[1].lower() in exts:
         print(url)
 " <<< "${RESPONSE}" 2>/dev/null) || true
 
-if [ -z "${WAV_URLS}" ]; then
-    echo "ℹ️  No .wav files found in ${GITHUB_REPO}/${RECORDINGS_PATH} — skipping."
+if [ -z "${AUDIO_URLS}" ]; then
+    echo "ℹ️  No audio files found in ${GITHUB_REPO}/${RECORDINGS_PATH} — skipping."
     exit 0
 fi
 
-WAV_COUNT=$(echo "${WAV_URLS}" | wc -l)
-echo "   Found ${WAV_COUNT} recording(s) — downloading to ${TARGET_DIR}"
+FILE_COUNT=$(echo "${AUDIO_URLS}" | wc -l)
+echo "   Found ${FILE_COUNT} recording(s) — downloading to ${TARGET_DIR}"
 
 mkdir -p "${TARGET_DIR}"
 
@@ -75,11 +82,90 @@ while IFS= read -r url; do
         FAILED=$((FAILED + 1))
         echo "   ✗ ${filename} (download failed)"
     fi
-done <<< "${WAV_URLS}"
+done <<< "${AUDIO_URLS}"
 
 echo
 if [ ${FAILED} -gt 0 ]; then
-    echo "⚠️  Downloaded ${DOWNLOADED}/${WAV_COUNT} recording(s) (${FAILED} failed)"
+    echo "⚠️  Downloaded ${DOWNLOADED}/${FILE_COUNT} recording(s) (${FAILED} failed)"
 else
-    echo "✅ Downloaded ${DOWNLOADED} personal recording(s) to ${TARGET_DIR}"
+    echo "✅ Downloaded ${DOWNLOADED} personal recording(s)"
 fi
+
+# ---------------------------------------------------------------------------
+# Auto-convert all recordings to 16kHz, 16-bit PCM, mono WAV
+# Uses the same librosa + scipy pattern as the rest of the codebase.
+# ---------------------------------------------------------------------------
+if [ ${DOWNLOADED} -eq 0 ]; then
+    exit 0
+fi
+
+# Activate the training venv if available (needed for librosa/scipy)
+if [ -f "${DATA_DIR}/.venv/bin/activate" ]; then
+    # shellcheck source=/dev/null
+    source "${DATA_DIR}/.venv/bin/activate"
+else
+    echo "⚠️  Python venv not found — skipping audio format conversion."
+    echo "   Run 'setup' first, then re-run pull_personal_recordings."
+    echo "   (WAV files at 16kHz/16-bit/mono will still work without conversion.)"
+    exit 0
+fi
+
+echo "   Converting recordings to 16kHz 16-bit PCM mono WAV..."
+
+python3 - "${TARGET_DIR}" <<'PYEOF'
+import os, sys, glob
+
+input_dir = sys.argv[1]
+AUDIO_EXTS = ('.wav', '.mp3', '.flac', '.ogg', '.m4a', '.webm', '.aac', '.wma')
+
+# Find audio files
+files = []
+for ext in AUDIO_EXTS:
+    files.extend(glob.glob(os.path.join(input_dir, f'*{ext}')))
+    files.extend(glob.glob(os.path.join(input_dir, f'*{ext.upper()}')))
+
+# Deduplicate
+files = sorted(set(files))
+if not files:
+    print("   No audio files to convert.")
+    sys.exit(0)
+
+# Lazy-import heavy libs only when we have work to do
+import numpy as np
+import scipy.io.wavfile
+import librosa
+
+converted = 0
+failed = 0
+already_ok = 0
+
+for path in files:
+    basename = os.path.splitext(os.path.basename(path))[0]
+    dst = os.path.join(input_dir, basename + '.wav')
+
+    try:
+        y, _ = librosa.load(path, sr=16000, mono=True)
+        if y.size == 0:
+            raise ValueError("empty audio")
+
+        x = np.clip(y, -1.0, 1.0)
+        pcm = (x * 32767).astype(np.int16)
+        scipy.io.wavfile.write(dst, 16000, pcm)
+
+        # Remove original if it was a non-wav format
+        if os.path.abspath(path) != os.path.abspath(dst):
+            os.remove(path)
+            converted += 1
+            print(f"   ✓ {os.path.basename(path)} → {basename}.wav")
+        else:
+            converted += 1
+
+    except Exception as e:
+        failed += 1
+        print(f"   ✗ {os.path.basename(path)}: {e}")
+
+if failed > 0:
+    print(f"\n⚠️  Converted {converted} file(s), {failed} failed")
+else:
+    print(f"\n✅ All {converted} recording(s) converted to 16kHz 16-bit PCM mono WAV")
+PYEOF
