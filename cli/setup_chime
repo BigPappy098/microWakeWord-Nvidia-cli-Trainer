@@ -109,7 +109,7 @@ else
         rm -rf "${AUDIO_DIR}" || :
         mkdir -p "${AUDIO_DIR}" || :
         echo "   Untarring ${AUDIO_TARFILE}"
-        tar -xzf "${AUDIO_TAR}" -C "${AUDIO_DIR}"
+        tar --no-same-owner -xzf "${AUDIO_TAR}" -C "${AUDIO_DIR}"
     fi
 
     if "${CLEANUP_ARCHIVES}" && [ -f "${AUDIO_TAR}" ] ; then

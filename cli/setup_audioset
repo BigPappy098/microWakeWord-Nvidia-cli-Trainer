@@ -157,7 +157,7 @@ else
         write_filecount=true
 
         echo "   Untarring bal_train0${i}.tar"
-        tar -xf "${fname}" -C "${AUDIO_DIR}"
+        tar --no-same-owner -xf "${fname}" -C "${AUDIO_DIR}"
         if "${CLEANUP_ARCHIVES}" && [ -f "${fname}" ] ; then
             echo "   Cleaning up bal_train0${i}.tar"
             rm -rf "${fname}"
