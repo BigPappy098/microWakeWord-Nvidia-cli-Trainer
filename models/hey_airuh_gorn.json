@@ -1,8 +1,8 @@
 {
     "type": "micro",
     "wake_word": "Hey Airuh Gorn",
-    "author": "Tater Totterson",
-    "website": "https://github.com/TaterTotterson/microWakeWord-Trainer-Nvidia-Docker.git",
+    "author": "BigPappy098",
+    "website": "https://github.com/BigPappy098/microWakeWord-Trainer-Nvidia-Docker",
     "model": "hey_airuh_gorn.tflite",
     "trained_languages": ["en"],
     "version": 2,

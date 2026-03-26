@@ -109,11 +109,14 @@ train_wake_word "hey jarvis"
 
 This runs the full pipeline:
 1. **Pulls personal recordings** from your GitHub fork (if configured)
-2. **Generates** 50,000 synthetic TTS samples of your wake phrase
-3. **Augments** all samples (pitch shifting, background noise, room acoustics)
-4. **Trains** the neural network (~40,000 steps)
-5. **Outputs** a quantized `.tflite` model ready for ESP32
-6. **Pushes** the model to your GitHub fork (if configured)
+2. **Previews pronunciation** — generates 1 TTS sample and pauses so you can listen and confirm the wake word sounds right before committing to the full run
+3. **Generates** 50,000 synthetic TTS samples of your wake phrase
+4. **Augments** all samples (pitch shifting, background noise, room acoustics)
+5. **Trains** the neural network (~40,000 steps)
+6. **Outputs** a quantized `.tflite` model ready for ESP32
+7. **Pushes** the model to your GitHub fork's `models/` folder (if configured)
+
+During the preview step, you'll see the path to a `.wav` file. Download it from RunPod's file browser and listen on your phone or computer. If it sounds wrong, type `n` to cancel and try respelling the word phonetically.
 
 Training takes roughly 1-3 hours depending on the GPU.
 
@@ -130,9 +133,23 @@ After training, your files are in two places:
 ```
 
 **On GitHub** (if you configured `GITHUB_TOKEN` and `GITHUB_REPO`):
-The `.tflite` and `.json` files are automatically pushed to your fork.
+The `.tflite` and `.json` files are automatically pushed to your fork's `models/` folder.
 
-Flash the `.tflite` file to your ESP32 device via ESPHome.
+### Step 11: Use Your Model in ESPHome
+
+Add the model to your ESPHome device config by pointing to the JSON file's raw URL on GitHub:
+
+```yaml
+micro_wake_word:
+  models:
+    - model: https://raw.githubusercontent.com/<your-username>/microWakeWord-Trainer-Nvidia-Docker/refs/heads/main/models/hey_jarvis.json
+  on_wake_word_detected:
+    - logger.log: "Wake word detected!"
+```
+
+The JSON file contains the model reference, probability cutoff, and sliding window settings — ESPHome handles everything automatically.
+
+To get the raw URL: go to your fork on GitHub, navigate to `models/<wake_word>.json`, click **Raw**, and copy the URL.
 
 ---
 
@@ -158,6 +175,7 @@ Options:
   --batch-size=<N>        Samples per batch (default: 100)
   --training-steps=<N>    Training iterations (default: 40000)
   --language=<lang>       TTS language: "en", "nl", etc. (default: en)
+  --no-preview            Skip pronunciation preview, start immediately
   --cleanup-work-dir      Delete intermediate files after training
 ```
 
@@ -171,6 +189,9 @@ train_wake_word "hey jarvis"
 
 # Custom display title (what shows in ESPHome)
 train_wake_word "hey jarvis" "Hey Jarvis"
+
+# Skip pronunciation preview (for re-runs where you know it sounds right)
+train_wake_word --no-preview "hey jarvis"
 
 # Dutch language
 train_wake_word --language=nl "hallo computer"
@@ -187,7 +208,7 @@ Set these in your RunPod pod settings so they persist across restarts.
 | `GITHUB_TOKEN` | Yes | Personal access token with `repo` scope |
 | `GITHUB_REPO` | Yes | Your fork in `owner/repo` format |
 | `GITHUB_BRANCH` | No | Branch to use (default: `main`) |
-| `GITHUB_PATH` | No | Directory in repo for trained models (default: `.`) |
+| `GITHUB_PATH` | No | Directory in repo for trained models (default: `models`) |
 | `GITHUB_RECORDINGS_PATH` | No | Directory in repo for recordings (default: `personal_samples`) |
 
 If `GITHUB_TOKEN` and `GITHUB_REPO` aren't set, recording pull and model push are silently skipped. Everything else still works.
