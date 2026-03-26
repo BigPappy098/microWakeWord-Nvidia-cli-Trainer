@@ -35,13 +35,9 @@ echo "===== microWakeWord Trainer Setup ====="
 echo "================================================================================"
 echo
 
-# Phase 1: Python venv
+# Phase 1: Python venv  (idempotent — upgrades existing venvs & installs new deps)
 echo "===== Phase 1/2: Python virtual environment ====="
-if [ -f "${DATA_DIR}/.venv/bin/activate" ]; then
-    echo "Python venv already exists at ${DATA_DIR}/.venv — skipping."
-else
-    "${CLIDIR}/setup_python_venv" --data-dir="${DATA_DIR}"
-fi
+"${CLIDIR}/setup_python_venv" --data-dir="${DATA_DIR}"
 echo
 
 # Phase 2: Training datasets
