@@ -21,8 +21,8 @@ DEFAULT_LANGUAGE=en
 : "${LANGUAGE:=${DEFAULT_LANGUAGE}}"
 : "${CLEANUP_WORK_DIR:=false}"
 : "${NO_PREVIEW:=false}"
-: "${CLEANUP_ARCHIVES:=false}"
-: "${CLEANUP_INTERMEDIATE_FILES:=false}"
+: "${CLEANUP_ARCHIVES:=true}"
+: "${CLEANUP_INTERMEDIATE_FILES:=true}"
 : "${QUIET:=false}"
 : "${VERBOSE:=false}"
 
