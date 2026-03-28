@@ -29,7 +29,7 @@ This lets the trainer pull your recordings and push finished models back to your
 
 Recording your own voice saying the wake word improves detection accuracy. These samples get weighted 3x during training.
 
-1. On your computer, record yourself saying your wake word
+1. On your phone or computer, record yourself saying your wake word
    - Any common audio format works: `.wav`, `.mp3`, `.flac`, `.ogg`, `.m4a`, `.webm`, `.aac`
    - Files are **automatically converted** to the required format (16kHz, 16-bit PCM, mono) during pull
    - Most phone voice recorder apps work out of the box — no manual conversion needed
@@ -42,11 +42,11 @@ Recording your own voice saying the wake word improves detection accuracy. These
      hey_airuh_gorn/
        speaker01_take01.m4a
        speaker01_take02.m4a
-     yo_chungus/
+     hey_potato/
        speaker01_take01.wav
        speaker02_take01.wav
    ```
-   The folder name should be your wake word in lowercase with spaces as underscores.
+   The folder name should be your wake word in lowercase with spaces as underscores. Spelling should match how you plan to enter it in the training step.
    This keeps recordings organized so training only uses the right samples for each wake word.
 4. Commit and push them to GitHub
 
@@ -70,7 +70,7 @@ The network volume stores everything (datasets, Python environment, models). It 
 
 1. In RunPod, go to **Storage** in the sidebar
 2. Click **+ Network Volume**
-3. Set size to **100 GB** (training datasets are ~50GB, plus room for models and working files)
+3. Set size to **150 GB** (training datasets are ~100GB, plus room for models and working files)
 4. Pick a datacenter region — **remember this**, your pod must be in the same region
 5. Name it `mww-data`
 6. Click **Create**
@@ -108,7 +108,7 @@ This does two things:
 1. Creates a Python virtual environment with TensorFlow, PyTorch, and all dependencies
 2. Downloads ~50GB of training datasets (negative samples the model needs to learn what *isn't* your wake word)
 
-**This takes 30-60+ minutes** on the first run. Go grab a coffee.
+**This takes 60+ minutes** on the first run. Go grab a coffee.
 
 Everything is saved to your network volume — you only do this once. Next time you start the pod, it's all still there.
 
@@ -124,10 +124,10 @@ This runs the full pipeline:
 3. **Generates** 50,000 synthetic TTS samples of your wake phrase
 4. **Augments** all samples (pitch shifting, background noise, room acoustics)
 5. **Trains** the neural network (~40,000 steps)
-6. **Outputs** a quantized `.tflite` model ready for ESP32
+6. **Outputs** a quantized `.tflite` model and the matching `.json` file ready for ESP32/ESPHome
 7. **Pushes** the model to your GitHub fork's `models/` folder (if configured)
 
-During the preview step, you'll see the path to a `.wav` file. Download it from RunPod's file browser and listen on your phone or computer. If it sounds wrong, type `n` to cancel and try respelling the word phonetically.
+During the preview step, you'll see the link to the file in your repo or a path to the `.wav` file if no GitHub info was set. Listen on GitHub or download it from RunPod's file browser and listen on your phone or computer. If it sounds wrong, type `n` to cancel and try respelling the word phonetically. If correct, type `y` to continue the training.
 
 Training takes roughly 1-3 hours depending on the GPU.
 
