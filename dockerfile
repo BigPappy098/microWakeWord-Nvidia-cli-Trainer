@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Clone the trainer repo so users can `git pull` to get updates
 # without rebuilding the Docker image.
-RUN git clone https://github.com/BigPappy098/microWakeWord-Trainer-Nvidia-Docker.git /root/mww-scripts \
+RUN git clone https://github.com/BigPappy098/microWakeWord-Nvidia-cli-Trainer.git /root/mww-scripts \
  && chmod -R a+x /root/mww-scripts/cli \
  && chmod +x /root/mww-scripts/train_wake_word \
               /root/mww-scripts/setup \
