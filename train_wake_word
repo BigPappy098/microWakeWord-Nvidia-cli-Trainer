@@ -124,9 +124,14 @@ export TF_XLA_FLAGS="${TF_XLA_FLAGS:---tf_xla_auto_jit=0}"
 if ${IS_BLACKWELL} ; then
     # TF 2.20 + Blackwell is often unstable with cuda_malloc_async.
     unset TF_GPU_ALLOCATOR
+    # PyTorch (used by piper TTS) does not yet support Blackwell (sm_120).
+    # Force CPU for sample generation; TensorFlow training still uses GPU.
+    GENERATOR_ENV="CUDA_VISIBLE_DEVICES="
     echo "ℹ️  Blackwell detected (compute capability ${GPU_COMPUTE_CAPABILITY}): using compatibility GPU defaults."
+    echo "ℹ️  PyTorch TTS generation will use CPU (Blackwell not yet supported by PyTorch)."
 else
     export TF_GPU_ALLOCATOR="${TF_GPU_ALLOCATOR:-cuda_malloc_async}"
+    GENERATOR_ENV=""
 fi
 
 # Enable driver-side PTX JIT fallback when ptxas/nvlink are unavailable.
@@ -182,7 +187,7 @@ upload_preview_to_github() {
 
 if ! ${NO_PREVIEW:-false} ; then
     echo "===== Generating pronunciation preview ====="
-    "${CLIDIR}/wake_word_sample_generator" \
+    env ${GENERATOR_ENV} "${CLIDIR}/wake_word_sample_generator" \
         --samples=1 \
         --batch-size=1 \
         --language="${LANGUAGE}" \
@@ -212,7 +217,7 @@ if ! ${NO_PREVIEW:-false} ; then
         read -r -p "Continue with full training? [Y/n/r(eplay)] " CONFIRM
         while [[ "${CONFIRM}" =~ ^[rR] ]] ; do
             echo "Regenerating preview sample..."
-            "${CLIDIR}/wake_word_sample_generator" \
+            env ${GENERATOR_ENV} "${CLIDIR}/wake_word_sample_generator" \
                 --samples=1 \
                 --batch-size=1 \
                 --language="${LANGUAGE}" \
@@ -245,7 +250,7 @@ if ! ${NO_PREVIEW:-false} ; then
     fi
 fi
 
-"${CLIDIR}/wake_word_sample_generator" \
+env ${GENERATOR_ENV} "${CLIDIR}/wake_word_sample_generator" \
     --samples=${SAMPLES} \
     --batch-size=${BATCH_SIZE} \
     --language="${LANGUAGE}" \
