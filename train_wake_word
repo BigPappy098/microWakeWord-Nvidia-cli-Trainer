@@ -5,7 +5,7 @@ PROGPATH=$(realpath "$0")
 PROGDIR=$(dirname "${PROGPATH}")
 CLIDIR="${PROGDIR}/cli"
 
-KNOWN_ARGS=( samples batch-size train-batch-size training-steps data-dir cleanup-work-dir language no-preview auto-stop )
+KNOWN_ARGS=( samples batch-size train-batch-size training-steps eval-interval data-dir cleanup-work-dir language no-preview auto-stop )
 source "${CLIDIR}/shell.functions"
 WAKE_WORD=${POSITIONAL_ARGS[0]}
 
@@ -37,6 +37,10 @@ Options:
 --training-steps:     Number of training steps.  More training steps means better
                       detection and false positive rates but also more time to train.
                       Default: ${DEFAULT_TRAINING_STEPS}
+
+--eval-interval:      Run evaluation every N training steps.  Lower values give
+                      more frequent progress updates but slow down training.
+                      Default: ${DEFAULT_EVAL_INTERVAL}
 
 --cleanup-work-dir:   Delete the /data/work directory after successful training.
                       Default: false

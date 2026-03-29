@@ -4,7 +4,7 @@ set -e
 PROGPATH=$(realpath "$0")
 PROGDIR=$(dirname "${PROGPATH}")
 
-KNOWN_ARGS=( training-steps train-batch-size samples data-dir )
+KNOWN_ARGS=( training-steps train-batch-size eval-interval samples data-dir )
 source "${PROGDIR}/shell.functions"
 WAKE_WORD="${POSITIONAL_ARGS[0]}"
 
@@ -118,7 +118,7 @@ fi
 
 cd "${WORK_DIR}"
 
-echo "===== Starting ${TRAINING_STEPS} training steps (batch_size=${TRAIN_BATCH_SIZE}) ====="
+echo "===== Starting ${TRAINING_STEPS} training steps (batch_size=${TRAIN_BATCH_SIZE}, eval every ${EVAL_INTERVAL}) ====="
 START_TS=$EPOCHSECONDS
 
 mkdir -p "${WORK_DIR}/trained_models" || :
@@ -129,7 +129,7 @@ YAML_PATH="${WORK_DIR}/trained_models/training_parameters.yaml"
 cat <<EOF > "${YAML_PATH}"
 batch_size: ${TRAIN_BATCH_SIZE}
 clip_duration_ms: 1500
-eval_step_interval: 500
+eval_step_interval: ${EVAL_INTERVAL}
 features:
 - features_dir: __WAKEWORD_FEATURES__
   penalty_weight: 1.0
